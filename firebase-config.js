@@ -1,7 +1,9 @@
-// Firebase 콘솔 > 프로젝트 설정 > 내 앱(웹)에서 복사한 값으로 교체하세요. (README 참고)
+// Firebase 연결 정보 (비밀번호가 아니라 공개되어도 괜찮은 값입니다. 보호는 firestore.rules가 담당)
 export const firebaseConfig = {
-  apiKey: "여기에_붙여넣기",
-  authDomain: "여기에_붙여넣기",
-  projectId: "여기에_붙여넣기",
-  appId: "여기에_붙여넣기"
+  apiKey: "AIzaSyDZkGk1yY_dQNKw8duoc9rl4rRf5ftFPaU",
+  authDomain: "budget-efe4f.firebaseapp.com",
+  projectId: "budget-efe4f",
+  storageBucket: "budget-efe4f.firebasestorage.app",
+  messagingSenderId: "812815572941",
+  appId: "1:812815572941:web:25453cd35dfae92e0f2e84"
 };

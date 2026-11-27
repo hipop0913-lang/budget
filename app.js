@@ -7,17 +7,28 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { firebaseConfig } from "./firebase-config.js";
 
 const $ = id => document.getElementById(id);
-const CATS = { out: ["식비","카페/간식","교통","주거/통신","생활용품","의료","문화/여가","경조사","기타"],
-               in: ["월급","용돈","부수입","기타"] };
 const won = n => n.toLocaleString("ko-KR") + "원";
+
+// 카테고리: [이름, 이모지, 아이콘 배경색]
+const CATS = {
+  out: [["식비","🍚","#ffe9d6"],["카페/간식","☕","#f3e6da"],["장보기","🛒","#e3f4dd"],["교통","🚌","#dbeafe"],["주거/통신","🏠","#e6e3fb"],
+        ["생활용품","🧺","#e0f2f1"],["의료","💊","#fde2e4"],["문화/여가","🎬","#fff3c4"],["육아/교육","🍼","#ffe0ef"],["경조사","🎁","#fde7f3"],
+        ["쇼핑","🛍️","#e9e3ff"],["여행","✈️","#d9f1ff"],["보험/금융","🏦","#e8eaf0"],["반려동물","🐶","#fbe9d0"],["기타","📦","#ececec"]],
+  in:  [["월급","💰","#dcf5e6"],["용돈","🧧","#ffe9e0"],["부수입","💵","#e4f5d6"],["이자/투자","📈","#dbeafe"],["기타","📦","#ececec"]]
+};
+const PAYS = ["신용카드","체크카드","현금","계좌이체","기타"];
+const catInfo = (type, name) => CATS[type].find(c => c[0] === name) || ["기타","📦","#ececec"];
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// 오프라인에서 입력해도 나중에 자동으로 동기화됩니다
 const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
-let user = null, hid = null, unsub = null;
+let user = null, hid = null, nick = "", unsub = null;
 let cur = new Date(); cur.setDate(1);
+let items = [];
+let personF = "all", payF = "all";
+let editing = null;          // 수정 중인 내역 (없으면 새 입력)
+let selCat = "", selPay = "";
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 
@@ -26,10 +37,11 @@ const errText = e => ({
   "auth/invalid-credential": "이메일 또는 비밀번호가 맞지 않아요.",
   "auth/email-already-in-use": "이미 가입된 이메일이에요. 로그인을 눌러주세요.",
   "auth/weak-password": "비밀번호는 6자 이상이어야 해요.",
-  "auth/invalid-email": "이메일 형식이 올바르지 않아요."
+  "auth/invalid-email": "이메일 형식이 올바르지 않아요.",
+  "permission-denied": "권한이 없어요. (Firestore 규칙을 확인해 주세요)"
 }[e.code] || "오류: " + (e.code || e.message));
 
-// ---- 로그인 ----
+// ---------- 로그인 ----------
 $("btn-login").onclick = () => auth_(signInWithEmailAndPassword);
 $("btn-signup").onclick = () => auth_(createUserWithEmailAndPassword);
 async function auth_(fn) {
@@ -37,8 +49,7 @@ async function auth_(fn) {
   try { await fn(auth, $("email").value.trim(), $("password").value); }
   catch (e) { $("login-msg").textContent = errText(e); }
 }
-const logout = () => signOut(auth);
-$("btn-logout-1").onclick = $("btn-logout-2").onclick = logout;
+$("btn-logout-1").onclick = $("btn-logout-2").onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, async u => {
   user = u;
@@ -46,10 +57,11 @@ onAuthStateChanged(auth, async u => {
   if (!u) { hid = null; return show("login"); }
   const me = await getDoc(doc(db, "users", u.uid)).catch(() => null);
   hid = me?.exists() ? me.data().householdId : null;
+  nick = me?.exists() ? (me.data().nickname || "") : "";
   hid ? startMain() : show("household");
 });
 
-// ---- 가구 만들기/참여 ----
+// ---------- 가구 만들기/참여 ----------
 function newCode() {
   const a = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; let s = "";
   for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)];
@@ -59,7 +71,7 @@ $("btn-create").onclick = async () => {
   try {
     const code = newCode();
     await setDoc(doc(db, "households", code), { members: [user.uid], createdAt: Date.now() });
-    await setDoc(doc(db, "users", user.uid), { householdId: code });
+    await setDoc(doc(db, "users", user.uid), { householdId: code }, { merge: true });
     hid = code; startMain();
   } catch (e) { $("hh-msg").textContent = errText(e); }
 };
@@ -75,68 +87,171 @@ $("btn-join").onclick = async () => {
       if (m.length >= 2) return $("hh-msg").textContent = "이미 두 명이 연결된 가계부예요.";
       await updateDoc(ref, { members: arrayUnion(user.uid) });
     }
-    await setDoc(doc(db, "users", user.uid), { householdId: code });
+    await setDoc(doc(db, "users", user.uid), { householdId: code }, { merge: true });
     hid = code; startMain();
   } catch (e) { $("hh-msg").textContent = errText(e); }
 };
 
-// ---- 메인: 실시간 목록 ----
-const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const monthRange = () => {
-  const e = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-  return [ymd(cur), ymd(e)];
+// ---------- 별명 ----------
+function askNick() { $("nick-input").value = nick; $("dlg-nick").showModal(); }
+$("btn-nick").onclick = askNick;
+$("form-nick").onsubmit = async ev => {
+  ev.preventDefault();
+  nick = $("nick-input").value.trim();
+  $("dlg-nick").close();
+  await setDoc(doc(db, "users", user.uid), { nickname: nick }, { merge: true }).catch(e => alert(errText(e)));
+  render();
 };
+
+// ---------- 메인 ----------
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const DOW = ["일","월","화","수","목","금","토"];
+
 function startMain() {
   show("main");
-  $("code-info").textContent = "초대 코드: " + hid;
+  $("code-info").textContent = "초대 코드 " + hid;
+  const sel = $("pay-filter");
+  sel.innerHTML = `<option value="all">결제수단 전체</option>` + PAYS.map(p => `<option>${p}</option>`).join("");
+  sel.value = payF;
   listen();
+  if (!nick) askNick();
 }
 function listen() {
   if (unsub) unsub();
   $("month-label").textContent = `${cur.getFullYear()}년 ${cur.getMonth() + 1}월`;
-  const [s, e] = monthRange();
+  const s = ymd(cur), e = ymd(new Date(cur.getFullYear(), cur.getMonth() + 1, 1));
   const q = query(collection(db, "households", hid, "transactions"),
     where("date", ">=", s), where("date", "<", e), orderBy("date", "desc"));
-  // 상대방이 입력하면 이 함수가 자동으로 다시 실행됩니다 (실시간 연동)
-  unsub = onSnapshot(q, snap => render(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  // 상대방이 입력/수정/삭제하면 이 함수가 자동으로 다시 실행됩니다 (실시간 연동)
+  unsub = onSnapshot(q, snap => { items = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
 }
-function render(items) {
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function render() {
+  if (!user || !hid) return;
+  const list = items.filter(t =>
+    (personF === "all" || (personF === "me") === (t.uid === user.uid)) &&
+    (payF === "all" || t.pay === payF));
   let inn = 0, out = 0;
-  const ul = $("list"); ul.innerHTML = "";
-  items.sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
-  for (const t of items) {
-    t.type === "in" ? inn += t.amount : out += t.amount;
-    const li = document.createElement("li");
-    const mine = t.uid === user.uid ? "나" : "상대";
-    li.innerHTML = `<div class="mid"><div class="cat"></div><div class="meta"></div></div><div class="amt"></div><button class="del">✕</button>`;
-    li.querySelector(".cat").textContent = t.category;
-    li.querySelector(".meta").textContent = `${t.date.slice(5).replace("-", "/")} · ${mine}${t.memo ? " · " + t.memo : ""}`;
-    const a = li.querySelector(".amt");
-    a.textContent = (t.type === "in" ? "+" : "-") + won(t.amount);
-    a.className = "amt " + (t.type === "in" ? "in" : "out");
-    li.querySelector(".del").onclick = () => confirm("삭제할까요?") && deleteDoc(doc(db, "households", hid, "transactions", t.id));
-    ul.append(li);
+  for (const t of list) t.type === "in" ? inn += t.amount : out += t.amount;
+
+  const who = personF === "all" ? "이번 달" : personF === "me" ? "내가 쓴" : "상대가 쓴";
+  $("hero-label").textContent = `${who} 지출`;
+  $("sum-out").textContent = won(out);
+  $("sum-in").textContent = won(inn);
+  const bal = inn - out;
+  $("sum-total").textContent = (bal < 0 ? "-" : "") + won(Math.abs(bal));
+
+  list.sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+  const box = $("list"); box.innerHTML = "";
+  const groups = new Map();
+  for (const t of list) { if (!groups.has(t.date)) groups.set(t.date, []); groups.get(t.date).push(t); }
+
+  for (const [date, arr] of groups) {
+    const d = new Date(date + "T00:00:00");
+    const sum = arr.reduce((s, t) => s + (t.type === "in" ? t.amount : -t.amount), 0);
+    const day = el("div", "day");
+    const head = el("div", "day-head");
+    head.append(el("span", "", `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`),
+                el("span", "", (sum < 0 ? "-" : sum > 0 ? "+" : "") + won(Math.abs(sum))));
+    const card = el("div", "card");
+    for (const t of arr) card.append(row(t));
+    day.append(head, card); box.append(day);
   }
-  $("sum-in").textContent = won(inn); $("sum-out").textContent = won(out);
-  const tot = inn - out; $("sum-total").textContent = (tot < 0 ? "-" : "") + won(Math.abs(tot));
-  $("empty").hidden = items.length > 0;
+  $("empty").hidden = list.length > 0;
 }
+function row(t) {
+  const [, emoji, bg] = catInfo(t.type, t.category);
+  const mine = t.uid === user.uid;
+  const name = t.by || (mine ? "나" : "상대");
+  const r = el("div", "item");
+  const ico = el("div", "ico", emoji); ico.style.background = bg;
+  const mid = el("div", "mid");
+  mid.append(el("div", "t1", t.memo || t.category));
+  const t2 = el("div", "t2");
+  const w = el("span", "who", name.slice(0, 1)); w.style.background = mine ? "var(--me)" : "var(--other)";
+  t2.append(w, el("span", "", [name, t.memo ? t.category : "", t.pay || ""].filter(Boolean).join(" · ")));
+  mid.append(t2);
+  const amt = el("div", "amt " + (t.type === "in" ? "in" : "out"), (t.type === "in" ? "+" : "-") + won(t.amount));
+  r.append(ico, mid, amt);
+  r.onclick = () => openForm(t);
+  return r;
+}
+
 $("prev").onclick = () => { cur.setMonth(cur.getMonth() - 1); listen(); };
 $("next").onclick = () => { cur.setMonth(cur.getMonth() + 1); listen(); };
-
-// ---- 입력 창 ----
-const type = () => document.querySelector('input[name="type"]:checked').value;
-function fillCats() { $("f-cat").innerHTML = CATS[type()].map(c => `<option>${c}</option>`).join(""); }
-document.querySelectorAll('input[name="type"]').forEach(r => r.onchange = fillCats);
-$("fab").onclick = () => {
-  $("form").reset(); fillCats(); $("f-date").value = ymd(new Date()); $("dlg").showModal();
+$("person-chips").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  personF = b.dataset.p;
+  document.querySelectorAll("#person-chips button").forEach(x => x.classList.toggle("on", x === b));
+  render();
 };
+$("pay-filter").onchange = e => { payF = e.target.value; render(); };
+
+// ---------- 입력/수정 창 ----------
+const typeNow = () => document.querySelector('input[name="type"]:checked').value;
+function drawCats() {
+  const g = $("cat-grid"); g.innerHTML = "";
+  if (!CATS[typeNow()].some(c => c[0] === selCat)) selCat = CATS[typeNow()][0][0];
+  for (const [name, emoji] of CATS[typeNow()]) {
+    const b = el("button", name === selCat ? "on" : ""); b.type = "button";
+    b.append(el("span", "", emoji), document.createTextNode(name));
+    b.onclick = () => { selCat = name; drawCats(); };
+    g.append(b);
+  }
+}
+function drawPays() {
+  const g = $("pay-chips"); g.innerHTML = "";
+  for (const p of PAYS) {
+    const b = el("button", p === selPay ? "on" : "", p); b.type = "button";
+    b.onclick = () => { selPay = selPay === p ? "" : p; drawPays(); };   // 다시 누르면 선택 해제
+    g.append(b);
+  }
+}
+document.querySelectorAll('input[name="type"]').forEach(r => r.onchange = drawCats);
+$("f-amount").oninput = e => {
+  const n = e.target.value.replace(/\D/g, "");
+  e.target.value = n ? (+n).toLocaleString("ko-KR") : "";
+};
+function openForm(t) {
+  editing = t || null;
+  $("form").reset();
+  $("dlg-title").textContent = t ? "내역 수정" : "내역 추가";
+  document.querySelector(`input[name="type"][value="${t ? t.type : "out"}"]`).checked = true;
+  selCat = t ? t.category : "";
+  selPay = t ? (t.pay || "") : (localStorage.getItem("lastPay") || "");
+  $("f-amount").value = t ? t.amount.toLocaleString("ko-KR") : "";
+  $("f-date").value = t ? t.date : ymd(new Date());
+  $("f-memo").value = t ? (t.memo || "") : "";
+  $("f-delete").hidden = !t;
+  drawCats(); drawPays();
+  $("dlg").showModal();
+  if (!t) $("f-amount").focus();
+}
+$("fab").onclick = () => openForm(null);
 $("f-cancel").onclick = () => $("dlg").close();
-$("form").onsubmit = async ev => {
+$("f-delete").onclick = () => {
+  if (!editing || !confirm("이 내역을 삭제할까요?")) return;
+  const id = editing.id; $("dlg").close();
+  deleteDoc(doc(db, "households", hid, "transactions", id)).catch(e => alert(errText(e)));
+};
+$("form").onsubmit = ev => {
   ev.preventDefault();
-  const data = { type: type(), amount: Math.round(+$("f-amount").value), category: $("f-cat").value,
-    memo: $("f-memo").value.trim(), date: $("f-date").value, uid: user.uid, createdAt: Date.now() };
+  const amount = +$("f-amount").value.replace(/\D/g, "");
+  if (!amount) return alert("금액을 입력해 주세요.");
+  const data = { type: typeNow(), amount, category: selCat, pay: selPay,
+    memo: $("f-memo").value.trim(), date: $("f-date").value };
   $("dlg").close();
+  try { localStorage.setItem("lastPay", selPay); } catch {}
   // 오프라인이면 대기했다가 연결되면 자동 전송되므로 await 하지 않음
-  addDoc(collection(db, "households", hid, "transactions"), data).catch(e => alert(errText(e)));
+  const col = collection(db, "households", hid, "transactions");
+  const p = editing
+    ? updateDoc(doc(col, editing.id), data)
+    : addDoc(col, { ...data, uid: user.uid, by: nick, createdAt: Date.now() });
+  p.catch(e => alert(errText(e)));
 };

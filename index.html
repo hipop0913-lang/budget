@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#f3f5fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="우리 가계부">
@@ -49,16 +49,23 @@
       <span id="bar-extra"></span>
     </header>
 
-    <!-- 가계부 탭 위쪽: 일일/달력 + 합계 -->
-    <div id="ledger-top">
-      <nav class="tabs" id="subtabs">
-        <button data-sub="daily" class="on">일일</button>
+    <!-- 가계부 탭 위쪽: 요약 카드 + 목록/달력 -->
+    <div id="ledger-top" class="pad">
+      <div class="hero">
+        <div class="hl" id="hero-label">이번 달 지출</div>
+        <div class="ha" id="sum-out">0원</div>
+        <div class="hr">
+          <div><span>수입</span><b id="sum-in">0원</b></div>
+          <div><span>남은 돈</span><b id="sum-total">0원</b></div>
+        </div>
+        <button type="button" class="hb" id="hero-budget" hidden>
+          <span class="hbl"><span>이번 달 예산</span><b id="hb-text"></b></span>
+          <span class="hbt"><i id="hb-fill"></i></span>
+        </button>
+      </div>
+      <div class="seg" id="subtabs">
+        <button data-sub="daily" class="on">목록</button>
         <button data-sub="cal">달력</button>
-      </nav>
-      <div class="summary">
-        <div><span>수입</span><b id="sum-in" class="in">0</b></div>
-        <div><span>지출</span><b id="sum-out" class="out">0</b></div>
-        <div><span>합계</span><b id="sum-total">0</b></div>
       </div>
       <div class="filters">
         <div class="chips" id="person-chips">
@@ -71,11 +78,11 @@
     </div>
 
     <!-- 통계 탭 위쪽 -->
-    <div id="stats-top" hidden>
-      <nav class="tabs" id="stats-type">
-        <button data-t="out" class="on out-tab">지출 <span id="st-out">0</span></button>
-        <button data-t="in" class="in-tab">수입 <span id="st-in">0</span></button>
-      </nav>
+    <div id="stats-top" class="pad" hidden>
+      <div class="seg" id="stats-type">
+        <button data-t="out" class="on">지출 <span id="st-out">0</span></button>
+        <button data-t="in">수입 <span id="st-in">0</span></button>
+      </div>
       <div class="filters">
         <div class="chips" id="stats-by">
           <button data-b="cat" class="on">분류별</button>
@@ -89,14 +96,17 @@
   <main id="panes">
     <div id="pane-daily"></div>
     <div id="pane-cal" hidden>
-      <div class="cal-head"><span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span></div>
-      <div class="cal" id="cal-grid"></div>
+      <div class="card calcard">
+        <div class="cal-head"><span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span></div>
+        <div class="cal" id="cal-grid"></div>
+        <p class="hint">많이 쓴 날일수록 진하게 표시돼요. 날짜를 누르면 그날 내역이 보여요.</p>
+      </div>
       <div id="cal-day"></div>
     </div>
     <div id="pane-stats" hidden></div>
     <div id="pane-budget" hidden></div>
     <div id="pane-more" hidden>
-      <div class="menu">
+      <div class="card menu">
         <button id="m-nick"><span>내 별명</span><b id="m-nick-v"></b></button>
         <button id="m-code"><span>초대 코드</span><b id="m-code-v"></b></button>
         <button id="m-logout"><span>로그아웃</span><b></b></button>

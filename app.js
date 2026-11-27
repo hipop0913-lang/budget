@@ -211,7 +211,16 @@ function render() {
   if (tab === "more") { $("m-nick-v").textContent = nick || "(없음)"; $("m-code-v").textContent = hid; }
 }
 
-// ---------- 가계부: 일일 / 달력 ----------
+// ---------- 가계부: 목록 / 달력 ----------
+const ICON = {"식비":["🍚","#ffe9d6"],"카페/간식":["☕","#f3e6da"],"장보기":["🛒","#e3f4dd"],"교통":["🚌","#dbeafe"],"주거/통신":["🏠","#e6e3fb"],
+  "생활용품":["🧺","#e0f2f1"],"의료":["💊","#fde2e4"],"문화/여가":["🎬","#fff3c4"],"육아/교육":["🍼","#ffe0ef"],"경조사":["🎁","#fde7f3"],
+  "쇼핑":["🛍️","#e9e3ff"],"여행":["✈️","#d9f1ff"],"보험/금융":["🏦","#e8eaf0"],"반려동물":["🐶","#fbe9d0"],"기타":["📦","#ececec"],
+  "월급":["💰","#dcf5e6"],"용돈":["🧧","#ffe9e0"],"부수입":["💵","#e4f5d6"],"이자/투자":["📈","#dbeafe"]};
+const icon = c => ICON[c] || ["📦", "#ececec"];
+const wonU = n => (n < 0 ? "-" : "") + won(Math.abs(n)) + "원";
+const man = n => n >= 10000 ? (Math.round(n / 1000) / 10) + "만" : won(n);
+const budgetTotal = () => budget?.total || Object.values(budget?.cats || {}).reduce((s, v) => s + v, 0);
+
 function sums(list) {
   let i = 0, o = 0;
   for (const t of list) t.type === "in" ? i += t.amount : o += t.amount;
@@ -220,37 +229,46 @@ function sums(list) {
 function renderLedger() {
   const list = filtered(curItems());
   const { i, o } = sums(list);
-  $("sum-in").textContent = won(i);
-  $("sum-out").textContent = won(o);
-  $("sum-total").textContent = won(i - o);
+  $("hero-label").textContent = personF === "all" ? "이번 달 지출" : `${personF === "me" ? meName() : otherName()}의 이번 달 지출`;
+  $("sum-out").textContent = wonU(o);
+  $("sum-in").textContent = wonU(i);
+  $("sum-total").textContent = wonU(i - o);
+  const tot = budgetTotal(), hb = $("hero-budget");
+  hb.hidden = !(tot && personF === "all" && payF === "all" && !budgetErr);
+  if (!hb.hidden) {
+    const spent = sums(curItems()).o, p = spent / tot * 100;
+    $("hb-text").textContent = `${Math.round(p)}% 사용 · ${tot - spent >= 0 ? won(tot - spent) + "원 남음" : won(spent - tot) + "원 초과"}`;
+    $("hb-fill").style.width = Math.min(p, 100) + "%";
+  }
   sub === "daily" ? renderDaily(list) : renderCal(list);
 }
+$("hero-budget").onclick = () => { tab = "budget"; render(); };
 function dayHead(date, arr) {
-  const d = new Date(date + "T00:00:00");
-  const h = el("div", "dhead");
-  h.append(el("span", "d", String(d.getDate())));
-  const isToday = date === todayStr();
-  h.append(el("span", "badge" + (isToday ? " today" : ""), isToday ? "오늘" : DOW[d.getDay()]));
-  h.append(el("span", "ym", `${d.getFullYear()}.${pad(d.getMonth() + 1)}${isToday ? " · " + DOW[d.getDay()] : ""}`));
-  const { i, o } = sums(arr);
-  const s = el("span", "sums");
-  if (i) s.append(el("span", "in", won(i)));
-  if (o) s.append(el("span", "out", won(o)));
-  h.append(s);
+  const d = new Date(date + "T00:00:00"), h = el("div", "dhead");
+  h.append(el("span", "", `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})${date === todayStr() ? " · 오늘" : ""}`));
+  const net = arr.reduce((s, t) => s + (t.type === "in" ? t.amount : -t.amount), 0);
+  h.append(el("span", "", (net > 0 ? "+" : "") + wonU(net)));
   return h;
 }
 function row(t) {
+  const [em, bg] = icon(t.category);
   const r = el("button", "item"); r.type = "button";
-  r.append(el("span", "cat", t.category));
+  const ic = el("span", "ico", em); ic.style.background = bg;
   const mid = el("span", "mid");
   mid.append(el("div", "t1", t.memo || t.category));
   const t2 = el("div", "t2");
-  t2.append(el("i", "dot " + (t.uid === user.uid ? "me" : "other")));
-  t2.append(document.createTextNode([nameOf(t), t.pay].filter(Boolean).join(" · ")));
+  t2.append(el("i", "dot " + (t.uid === user.uid ? "me" : "other")),
+    document.createTextNode([nameOf(t), t.memo ? t.category : "", t.pay].filter(Boolean).join(" · ")));
   mid.append(t2);
-  r.append(mid, el("span", "amt " + (t.type === "in" ? "in" : "out"), won(t.amount)));
+  r.append(ic, mid, el("span", "amt " + (t.type === "in" ? "in" : "out"), (t.type === "in" ? "+" : "-") + won(t.amount) + "원"));
   r.onclick = () => openForm(t);
   return r;
+}
+function dayBlock(date, arr) {
+  const d = el("div", "day"), c = el("div", "card");
+  arr.forEach(t => c.append(row(t)));
+  d.append(dayHead(date, arr), c);
+  return d;
 }
 const byNewest = (a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0);
 function renderDaily(list) {
@@ -258,7 +276,7 @@ function renderDaily(list) {
   if (!list.length) return box.append(el("div", "empty", "이 달의 내역이 없어요. 오른쪽 아래 + 버튼으로 추가해 보세요."));
   const groups = new Map();
   for (const t of [...list].sort(byNewest)) { if (!groups.has(t.date)) groups.set(t.date, []); groups.get(t.date).push(t); }
-  for (const [date, arr] of groups) { box.append(dayHead(date, arr)); arr.forEach(t => box.append(row(t))); }
+  for (const [date, arr] of groups) box.append(dayBlock(date, arr));
 }
 function renderCal(list) {
   const grid = $("cal-grid"); grid.innerHTML = "";
@@ -266,7 +284,9 @@ function renderCal(list) {
   const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
   const byDay = new Map();
   for (const t of list) { if (!byDay.has(t.date)) byDay.set(t.date, []); byDay.get(t.date).push(t); }
-  for (let i = 0; i < first; i++) grid.append(el("div", "cell blank"));
+  let max = 0;
+  for (const arr of byDay.values()) max = Math.max(max, sums(arr).o);
+  for (let i = 0; i < first; i++) grid.append(el("div"));
   for (let d = 1; d <= days; d++) {
     const date = `${y}-${pad(m + 1)}-${pad(d)}`, dow = (first + d - 1) % 7;
     const c = el("button", "cell"); c.type = "button";
@@ -274,84 +294,97 @@ function renderCal(list) {
     if (date === selDay) c.classList.add("sel");
     c.append(el("span", "n" + (dow === 0 ? " sun" : dow === 6 ? " sat" : ""), String(d)));
     const { i, o } = sums(byDay.get(date) || []);
-    if (i) c.append(el("span", "i", won(i)));
-    if (o) c.append(el("span", "o", won(o)));
+    if (i) c.append(el("span", "i", "+" + man(i)));
+    if (o) c.append(el("span", "o", "-" + man(o)));
+    // 많이 쓴 날일수록 진한 빨강, 수입만 있는 날은 연한 파랑
+    if (o) c.style.background = `rgba(217,45,58,${(0.07 + 0.3 * o / max).toFixed(2)})`;
+    else if (i) c.style.background = "var(--pri-soft)";
     c.onclick = () => { selDay = date; render(); };
     grid.append(c);
   }
-  const rest = (7 - (first + days) % 7) % 7;
-  for (let i = 0; i < rest; i++) grid.append(el("div", "cell blank"));
-
   const box = $("cal-day"); box.innerHTML = "";
-  if (!selDay) return box.append(el("div", "empty", "날짜를 누르면 그날 내역이 보여요."));
+  if (!selDay) return;
   const arr = (byDay.get(selDay) || []).sort(byNewest);
-  box.append(dayHead(selDay, arr));
-  if (!arr.length) box.append(el("div", "empty", "이날은 내역이 없어요."));
-  arr.forEach(t => box.append(row(t)));
+  if (!arr.length) { const d = el("div", "day"); d.append(dayHead(selDay, arr), el("div", "card empty", "이날은 내역이 없어요.")); return box.append(d); }
+  box.append(dayBlock(selDay, arr));
 }
 
 // ---------- 통계 ----------
 function renderStats() {
-  const now = curItems();
-  const tot = sums(now);
+  const now = curItems(), tot = sums(now);
   $("st-out").textContent = won(tot.o);
   $("st-in").textContent = won(tot.i);
   const box = $("pane-stats"); box.innerHTML = "";
   const list = now.filter(t => t.type === stType);
   const total = list.reduce((s, t) => s + t.amount, 0);
-  if (!total) return box.append(el("div", "empty", `이 달의 ${stType === "out" ? "지출" : "수입"} 내역이 없어요.`));
+  const kind = stType === "out" ? "지출" : "수입";
+  if (!total) return box.append(el("div", "empty", `이 달의 ${kind} 내역이 없어요.`));
 
   const keyOf = t => stBy === "cat" ? t.category : stBy === "pay" ? (t.pay || "미지정") : nameOf(t);
   const map = new Map();
   for (const t of list) map.set(keyOf(t), (map.get(keyOf(t)) || 0) + t.amount);
   const rows = [...map].sort((a, b) => b[1] - a[1]);
   const color = i => PALETTE[Math.min(i, PALETTE.length - 1)];
+  const pct = v => Math.round(v / total * 100);
 
-  // 원그래프
-  const NS = "http://www.w3.org/2000/svg", C = 2 * Math.PI * 25;
+  // 도넛 차트
+  const NS = "http://www.w3.org/2000/svg", R = 70, C = 2 * Math.PI * R;
   const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("viewBox", "0 0 180 180");
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "비율 원그래프: " + rows.map(([k, v]) => `${k} ${Math.round(v / total * 100)}%`).join(", "));
-  const g = document.createElementNS(NS, "g");
-  g.setAttribute("transform", "rotate(-90 50 50)");
+  svg.setAttribute("aria-label", `${kind} 비율 도넛 차트: ` + rows.map(([k, v]) => `${k} ${pct(v)}%`).join(", "));
+  const g = document.createElementNS(NS, "g"); g.setAttribute("transform", "rotate(-90 90 90)");
   let acc = 0;
   rows.forEach(([, v], i) => {
     const len = v / total * C, c = document.createElementNS(NS, "circle");
-    Object.entries({ cx: 50, cy: 50, r: 25, fill: "none", stroke: color(i), "stroke-width": 50,
-      "stroke-dasharray": `${len} ${C}`, "stroke-dashoffset": -acc }).forEach(([a, b]) => c.setAttribute(a, b));
+    const gap = rows.length > 1 ? 2 : 0;
+    Object.entries({ cx: 90, cy: 90, r: R, fill: "none", stroke: color(i), "stroke-width": 26,
+      "stroke-dasharray": `${Math.max(len - gap, 0.5)} ${C}`, "stroke-dashoffset": -acc }).forEach(([a, b]) => c.setAttribute(a, b));
     g.append(c); acc += len;
   });
   svg.append(g);
-  const wrap = el("div", "pie-wrap"); wrap.append(svg);
-
-  // 지난달 비교
+  const dn = el("div", "donut"); dn.append(svg);
+  const center = el("div", "c");
+  center.append(el("span", "", `총 ${kind}`), el("b", "", won(total)));
   const prev = prevItems().filter(t => t.type === stType).reduce((s, t) => s + t.amount, 0);
   if (prev) {
     const diff = Math.round((total - prev) / prev * 100);
-    const word = stType === "out" ? (diff >= 0 ? "더 썼어요" : "덜 썼어요") : (diff >= 0 ? "늘었어요" : "줄었어요");
-    wrap.append(el("div", "cmp", diff === 0 ? "지난달과 비슷해요" : `지난달보다 ${Math.abs(diff)}% ${word}`));
+    const em = el("em", "", diff === 0 ? "지난달과 비슷" : `지난달보다 ${diff > 0 ? "+" : ""}${diff}%`);
+    if (stType === "out" && diff > 0) em.style.color = "var(--out)";
+    center.append(em);
   }
-  box.append(wrap);
-
-  rows.forEach(([k, v], i) => {
-    const r = el("div", "srow");
-    const p = el("span", "pct", Math.round(v / total * 100) + "%"); p.style.background = color(i);
-    r.append(p, el("span", "nm", k), el("b", "", won(v)));
-    box.append(r);
+  dn.append(center);
+  const lg = el("div", "legend");
+  rows.slice(0, 6).forEach(([k, v], i) => {
+    const d = el("div"), dot = el("i"); dot.style.background = color(i);
+    d.append(dot, el("span", "", k), el("b", "", pct(v) + "%")); lg.append(d);
   });
+  const top = el("div", "card donut-card"); top.append(dn, lg); box.append(top);
 
+  // 순위
+  const rk = el("div", "card mt");
+  rk.append(el("div", "sec", stBy === "cat" ? "카테고리별 순위" : stBy === "pay" ? "결제수단별 순위" : "작성자별 순위"));
+  rows.forEach(([k, v], i) => {
+    const r = el("div", "rank"), h = el("div", "h"), l = el("span");
+    l.append(el("b", "", String(i + 1)), k);
+    h.append(l, el("b", "", wonU(v)));
+    const tr = el("div", "track"), f = el("i");
+    f.style.cssText = `width:${v / rows[0][1] * 100}%;background:${color(i)}`; tr.append(f);
+    r.append(h, tr); rk.append(r);
+  });
+  box.append(rk);
+
+  // 누가 얼마
   if (stBy !== "who") {
     const meSum = list.filter(t => t.uid === user.uid).reduce((s, t) => s + t.amount, 0), ot = total - meSum;
-    const sp = el("div", "split");
+    const sp = el("div", "card split");
     sp.append(el("div", "lb", stType === "out" ? "누가 얼마 썼나" : "누가 얼마 벌었나"));
-    const bar = el("div", "barx");
-    const a = el("i"); a.style.cssText = `width:${meSum / total * 100}%;background:var(--me)`;
-    const b = el("i"); b.style.cssText = `width:${ot / total * 100}%;background:var(--other)`;
+    const bar = el("div", "barx"), a = el("i"), b = el("i");
+    a.style.cssText = `width:${meSum / total * 100}%;background:var(--me)`;
+    b.style.cssText = `width:${ot / total * 100}%;background:var(--other)`;
     bar.append(a, b);
     const r2 = el("div", "row2");
-    r2.append(el("span", "", `${meName()} ${won(meSum)} (${Math.round(meSum / total * 100)}%)`),
-              el("span", "", `${otherName()} ${won(ot)} (${Math.round(ot / total * 100)}%)`));
+    r2.append(el("span", "", `${meName()} ${wonU(meSum)} (${pct(meSum)}%)`), el("span", "", `${otherName()} ${wonU(ot)} (${pct(ot)}%)`));
     sp.append(bar, r2); box.append(sp);
   }
 }
@@ -373,8 +406,8 @@ function renderBudget() {
   const spent = outs.reduce((s, t) => s + t.amount, 0);
   const p = spent / total * 100, left = total - spent;
 
-  const card = el("div", "bcard");
-  const h = el("div", "h"); h.append(el("span", "sub", "한 달 예산"), el("b", "", won(total))); card.append(h);
+  const card = el("div", "card bcard");
+  const h = el("div", "h"); h.append(el("span", "sub", "한 달 예산")); card.append(h, el("div", "big", wonU(total)));
   const tr = el("div", "track"), fill = el("i");
   fill.style.cssText = `width:${Math.min(p, 100)}%;background:${level(p)[0]}`; tr.append(fill); card.append(tr);
   const r = el("div", "r");
@@ -397,7 +430,7 @@ function renderBudget() {
 
   const names = Object.keys(cats).filter(k => cats[k] > 0);
   if (!names.length) return;
-  box.append(el("div", "bsec", "분류별 예산"));
+  const listCard = el("div", "card mt"); listCard.append(el("div", "sec", "카테고리별 예산")); box.append(listCard);
   names.sort((x, y) => CATS.out.indexOf(x) - CATS.out.indexOf(y));
   for (const k of names) {
     const lim = cats[k], used = outs.filter(t => t.category === k).reduce((s2, t2) => s2 + t2.amount, 0);
@@ -407,10 +440,10 @@ function renderBudget() {
     const ub = el("b", "", won(used)); if (pp > 100) ub.style.color = "var(--out)";
     right.append(ub, ` / ${won(lim)}`);
     hh.append(el("b", "", k), right);
-    const t2 = el("div", "track sm"), f2 = el("i"); f2.style.cssText = `width:${Math.min(pp, 100)}%;background:${bg}`; t2.append(f2);
+    const t2 = el("div", "track"), f2 = el("i"); f2.style.cssText = `width:${Math.min(pp, 100)}%;background:${bg}`; t2.append(f2);
     const st = el("div", "s", `${Math.round(pp)}% · ${lim - used >= 0 ? won(lim - used) + "원 남음" : won(used - lim) + "원 초과"}`);
     st.style.color = fg; if (pp > 100) st.style.fontWeight = "700";
-    rw.append(hh, t2, st); box.append(rw);
+    rw.append(hh, t2, st); listCard.append(rw);
   }
 }
 const numIn = inp => inp.oninput = () => { const n = inp.value.replace(/\D/g, ""); inp.value = n ? (+n).toLocaleString("ko-KR") : ""; };

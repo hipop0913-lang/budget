@@ -187,3 +187,63 @@ dialog.small input{margin:8px 0 12px}
 #b-cats .row input{text-align:right}
 
 #toast{position:fixed;left:50%;bottom:calc(170px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:20;white-space:nowrap}
+
+/* ===== 입력 v2: 한 줄씩 + 아래 선택 창 ===== */
+.fields{flex:0 0 auto!important;overflow:visible!important}
+.frow{width:100%;text-align:left}
+.frow.on{background:var(--pri-soft);box-shadow:inset 3px 0 0 var(--pri)}
+.frow.err{background:#fdecee;box-shadow:inset 3px 0 0 var(--out)}
+.val{margin-left:auto;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.val.ph{color:#a3abbb;font-weight:400;font-size:15px}
+.chev{color:#a3abbb;margin-left:6px}
+.panel-area{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end}
+.pick{background:var(--card);border-radius:18px 18px 0 0;box-shadow:0 -6px 18px rgba(30,45,90,.08);margin-top:12px;height:330px;display:flex;flex-direction:column;overflow:hidden}
+.ptop{display:flex;align-items:center;padding:12px 16px 10px}
+.ptop b{font-size:16px}
+.ptop button{margin-left:auto;color:var(--pri);font-size:14px;font-weight:600;padding:4px}
+.two{display:flex;flex:1;min-height:0;border-top:1px solid var(--line)}
+.two .big{width:128px;background:var(--bg);overflow-y:auto;flex:none}
+.two .big button{display:flex;align-items:center;gap:8px;width:100%;padding:11px 12px;font-size:14px;color:var(--sub);text-align:left}
+.two .big button.on{background:var(--card);color:var(--text);font-weight:700;box-shadow:inset 3px 0 0 var(--pri)}
+.two .small{flex:1;overflow-y:auto}
+.two .small button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 18px;font-size:15px;border-bottom:1px solid var(--line);text-align:left}
+.two .small button.on{color:var(--in);font-weight:700}
+.two .small .muted{color:var(--sub)}
+.two .small .addb{color:var(--pri);font-weight:600;border:0}
+.two .small .none{padding:20px 18px;color:var(--sub);font-size:14px}
+.ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:none}
+.ic.t{font-size:12px;font-weight:800}
+.cardchip{width:30px;height:20px;border-radius:4px;flex:none}
+.pl{display:flex;align-items:center;gap:10px;min-width:0}
+.calnav{display:flex;align-items:center;justify-content:center;gap:16px;padding:0 0 10px}
+.calnav b{font-size:18px}
+.calnav button{font-size:24px;color:var(--sub);padding:0 10px}
+.cal7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:0 14px;text-align:center}
+.cal7 .dw{font-size:12px;height:20px}
+.cal7 button{height:36px;border-radius:10px;font-size:15px}
+.cal7 .sun{color:var(--out)}.cal7 .sat{color:var(--in)}
+.cal7 .today{box-shadow:inset 0 0 0 1.5px var(--pri);font-weight:700}
+.cal7 .future{opacity:.35}
+.cal7 button.sel{background:var(--pri);color:#fff;opacity:1;font-weight:700}
+
+/* 결제수단 관리/추가 */
+.fields.plain{background:none;box-shadow:none;margin:0 16px;overflow-y:auto!important;flex:1 1 auto!important}
+.psec{font-size:13px;color:var(--sub);padding:14px 2px 6px}
+.pm{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.pm:last-child{border-bottom:0}
+.pm .n{flex:1;min-width:0}.pm .n b{display:block}.pm .n small{color:var(--sub);font-size:12px}
+.pm .x{color:var(--sub);font-size:18px;padding:4px 8px}
+.addrow{display:block;width:100%;text-align:center;color:var(--pri);font-weight:600;padding:14px}
+.lab2{font-size:13px;color:var(--sub);margin:4px 0 6px}
+#dlg-addpay .chips{margin-bottom:12px}
+#dlg-addpay .chips button.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.btns2{display:flex;gap:8px;margin-top:6px}.btns2 button{flex:1;padding:13px;border-radius:12px;border:1px solid var(--line)}
+.btns2 .primary{border-color:var(--pri)}
+
+/* 통계 상세 */
+.crumb{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;color:var(--sub)}
+.crumb button{color:var(--pri);font-weight:600;padding:4px 0}
+.crumb b{color:var(--text)}
+.rank.tap{cursor:pointer}
+.rank .h small{font-weight:600;margin-left:6px}
+.rank .go{color:var(--sub);margin-left:4px}

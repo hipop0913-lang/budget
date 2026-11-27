@@ -108,6 +108,7 @@
     <div id="pane-more" hidden>
       <div class="card menu">
         <button id="m-nick"><span>내 별명</span><b id="m-nick-v"></b></button>
+        <button id="m-pays"><span>결제수단 관리</span><b id="m-pays-v"></b></button>
         <button id="m-code"><span>초대 코드</span><b id="m-code-v"></b></button>
         <button id="m-logout"><span>로그아웃</span><b></b></button>
       </div>
@@ -131,30 +132,56 @@
     <header class="bar">
       <button type="button" id="f-close" class="nav" aria-label="닫기">‹</button>
       <b id="dlg-title">내역 추가</b>
-      <span class="who-tag" id="f-who"></span>
     </header>
     <nav class="tabs" id="f-type">
       <button type="button" data-t="out" class="on out-tab">지출</button>
       <button type="button" data-t="in" class="in-tab">수입</button>
     </nav>
     <div class="fields">
-      <label class="row"><span class="lab">날짜</span><input id="f-date" type="date" required></label>
-      <div class="row top"><span class="lab">분류</span><div class="chips wrap" id="f-cats"></div></div>
-      <div class="row top"><span class="lab">결제수단</span><div class="chips wrap" id="f-pays"></div></div>
-      <div class="row"><span class="lab">금액</span><span class="amount"><b id="f-amount">0</b>원</span></div>
+      <button type="button" class="row frow" data-p="date"><span class="lab">날짜</span><span class="val" id="f-date-v"></span><span class="chev">›</span></button>
+      <button type="button" class="row frow" data-p="amt"><span class="lab">금액</span><span class="amount"><b id="f-amount">0</b>원</span></button>
+      <button type="button" class="row frow" data-p="cat"><span class="lab">분류</span><span class="val" id="f-cat-v"></span><span class="chev">›</span></button>
+      <button type="button" class="row frow" data-p="pay"><span class="lab">결제수단</span><span class="val" id="f-pay-v"></span><span class="chev">›</span></button>
       <label class="row"><span class="lab">내용</span><input id="f-memo" placeholder="메모 (선택)" maxlength="60" enterkeyhint="done"></label>
     </div>
-    <div class="keypad" id="keypad">
-      <button type="button">1</button><button type="button">2</button><button type="button">3</button><button type="button" data-k="del" aria-label="지우기">⌫</button>
-      <button type="button">4</button><button type="button">5</button><button type="button">6</button><button type="button" data-k="+10000" class="sm">+1만</button>
-      <button type="button">7</button><button type="button">8</button><button type="button">9</button><button type="button" data-k="+5000" class="sm">+5천</button>
-      <button type="button">00</button><button type="button">0</button><button type="button">000</button><button type="button" data-k="+1000" class="sm">+1천</button>
+    <div class="panel-area">
+      <div class="keypad" id="keypad">
+        <button type="button">1</button><button type="button">2</button><button type="button">3</button><button type="button" data-k="del" aria-label="지우기">⌫</button>
+        <button type="button">4</button><button type="button">5</button><button type="button">6</button><button type="button" data-k="+10000" class="sm">+1만</button>
+        <button type="button">7</button><button type="button">8</button><button type="button">9</button><button type="button" data-k="+5000" class="sm">+5천</button>
+        <button type="button">00</button><button type="button">0</button><button type="button">000</button><button type="button" data-k="+1000" class="sm">+1천</button>
+      </div>
+      <div class="pick" id="f-panel" hidden></div>
     </div>
     <div class="actions">
       <button type="button" id="f-delete" class="danger" hidden>삭제</button>
       <button type="button" id="f-again">계속 입력</button>
       <button type="submit" class="primary grow">저장</button>
     </div>
+  </form>
+</dialog>
+
+<!-- 결제수단 관리 -->
+<dialog id="dlg-pays" class="full">
+  <div class="input">
+    <header class="bar">
+      <button type="button" id="p-close" class="nav" aria-label="닫기">‹</button>
+      <b>결제수단 관리</b>
+    </header>
+    <div class="fields plain" id="p-list"></div>
+  </div>
+</dialog>
+
+<!-- 결제수단 추가 -->
+<dialog id="dlg-addpay" class="small">
+  <form id="form-addpay">
+    <h3>결제수단 추가</h3>
+    <input id="ap-name" placeholder="이름 (예: 신한 Deep Dream)" maxlength="20" required>
+    <div class="lab2">종류</div>
+    <div class="chips wrap" id="ap-kind"></div>
+    <div class="lab2">누가 쓰나요</div>
+    <div class="chips" id="ap-owner"><button type="button" data-o="me" class="on">나만</button><button type="button" data-o="shared">공용 (둘 다)</button></div>
+    <div class="btns2"><button type="button" id="ap-cancel">취소</button><button type="submit" class="primary">추가</button></div>
   </form>
 </dialog>
 

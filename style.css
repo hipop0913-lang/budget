@@ -247,3 +247,52 @@ dialog.small input{margin:8px 0 12px}
 .rank.tap{cursor:pointer}
 .rank .h small{font-weight:600;margin-left:6px}
 .rank .go{color:var(--sub);margin-left:4px}
+
+/* ===== v4: 칸 높이·글자 통일 ===== */
+.fields .row{min-height:56px;height:56px;padding:0 16px}
+.fields label.row{height:56px}
+.fields .lab{width:72px;font-size:15px}
+.val,.row input,.amount,.amount b{font-size:17px!important;font-weight:700}
+.amount b{letter-spacing:0;margin-right:2px}
+.amount{margin-left:auto}
+.row input{text-align:right}
+.hbtns{position:absolute;right:8px;display:flex;gap:2px}
+.hbtns button{padding:8px 8px;font-size:14px;color:var(--pri);font-weight:600}
+#f-fav{font-size:20px}
+.favs{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;scrollbar-width:none}
+.favs::-webkit-scrollbar{display:none}
+.favs button{flex:none;padding:7px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.favs button b{color:var(--out);margin-left:4px}
+.favs .more{color:var(--sub)}
+/* 검색 */
+.sq{flex:1;margin-right:12px;padding:10px 14px;border-radius:12px}
+#s-res .sum{font-size:13px;color:var(--sub);padding:12px 4px 0}
+/* 결제수단 다이얼로그 */
+.billrow{display:flex;gap:10px;margin-bottom:4px}
+.billrow label{flex:1;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--sub);white-space:nowrap}
+.billrow input{width:56px;padding:9px;text-align:center;margin:0}
+.hint2{font-size:12px;color:var(--sub);margin:6px 0 12px;line-height:1.5}
+.pm .acts{display:flex;gap:2px}
+.pm .acts button{color:var(--sub);font-size:15px;padding:6px 7px}
+.pm .def{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--pri-soft);color:var(--in);margin-left:6px;font-weight:600}
+textarea{width:100%;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card);color:var(--text);margin:6px 0 10px;resize:none}
+/* 분류 편집 */
+.cbig{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+.cbig .sp{flex:1}
+.csub{display:flex;align-items:center;gap:10px;padding:10px 14px 10px 52px;border-bottom:1px solid var(--line);font-size:15px}
+.csub .sp{flex:1}
+.hidden-item{opacity:.4;text-decoration:line-through}
+.cbtn{color:var(--sub);font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:8px}
+/* 카드값 · 월별 추이 */
+.bill{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.bill:last-child{border-bottom:0}
+.bill .n{flex:1;min-width:0}.bill .n b{display:block}.bill .n small{color:var(--sub);font-size:12px}
+.bill .a{text-align:right}.bill .a b{display:block;color:var(--out)}.bill .a small{color:var(--sub);font-size:12px}
+.trend{display:flex;align-items:flex-end;gap:8px;height:150px;padding:8px 14px 0}
+.trend button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:11px;color:var(--sub)}
+.trend i{display:block;width:100%;max-width:34px;border-radius:6px 6px 0 0;background:var(--line)}
+.trend .on i{background:var(--pri)}
+.trend .on{color:var(--text);font-weight:700}
+.trend .v{font-size:10.5px;white-space:nowrap}
+.trend-x{display:flex;gap:8px;padding:6px 14px 12px;font-size:12px;color:var(--sub)}
+.trend-x span{flex:1;text-align:center}

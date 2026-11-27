@@ -109,6 +109,10 @@
       <div class="card menu">
         <button id="m-nick"><span>내 별명</span><b id="m-nick-v"></b></button>
         <button id="m-pays"><span>결제수단 관리</span><b id="m-pays-v"></b></button>
+        <button id="m-cats"><span>분류 편집</span><b>›</b></button>
+        <button id="m-favs"><span>즐겨찾기 관리</span><b id="m-favs-v"></b></button>
+        <button id="m-csv-month"><span>엑셀로 내보내기 (보고 있는 달)</span><b>⤓</b></button>
+        <button id="m-csv-all"><span>엑셀로 내보내기 (전체)</span><b>⤓</b></button>
         <button id="m-code"><span>초대 코드</span><b id="m-code-v"></b></button>
         <button id="m-logout"><span>로그아웃</span><b></b></button>
       </div>
@@ -132,6 +136,7 @@
     <header class="bar">
       <button type="button" id="f-close" class="nav" aria-label="닫기">‹</button>
       <b id="dlg-title">내역 추가</b>
+      <span class="hbtns"><button type="button" id="f-sms">📋 문자</button><button type="button" id="f-fav" aria-label="즐겨찾기로 저장">☆</button></span>
     </header>
     <nav class="tabs" id="f-type">
       <button type="button" data-t="out" class="on out-tab">지출</button>
@@ -145,6 +150,7 @@
       <label class="row"><span class="lab">내용</span><input id="f-memo" placeholder="메모 (선택)" maxlength="60" enterkeyhint="done"></label>
     </div>
     <div class="panel-area">
+      <div class="favs" id="fav-strip" hidden></div>
       <div class="keypad" id="keypad">
         <button type="button">1</button><button type="button">2</button><button type="button">3</button><button type="button" data-k="del" aria-label="지우기">⌫</button>
         <button type="button">4</button><button type="button">5</button><button type="button">6</button><button type="button" data-k="+10000" class="sm">+1만</button>
@@ -172,16 +178,62 @@
   </div>
 </dialog>
 
+<!-- 검색 -->
+<dialog id="dlg-search" class="full">
+  <div class="input">
+    <header class="bar">
+      <button type="button" id="s-close" class="nav" aria-label="닫기">‹</button>
+      <input id="s-q" class="sq" placeholder="메모·분류·결제수단·금액 검색" enterkeyhint="search">
+    </header>
+    <div class="fields plain" id="s-res"></div>
+  </div>
+</dialog>
+
+<!-- 분류 편집 -->
+<dialog id="dlg-cats" class="full">
+  <div class="input">
+    <header class="bar">
+      <button type="button" id="c-close" class="nav" aria-label="닫기">‹</button>
+      <b>분류 편집</b>
+    </header>
+    <div class="fields plain" id="c-list"></div>
+  </div>
+</dialog>
+
+<!-- 문자 붙여넣기 (클립보드를 못 읽을 때) -->
+<dialog id="dlg-sms" class="small">
+  <form id="form-sms">
+    <h3>결제 문자 붙여넣기</h3>
+    <p class="sub">카드 결제 문자를 길게 눌러 복사한 뒤, 아래 칸에 붙여넣으세요.</p>
+    <textarea id="sms-text" rows="6" placeholder="[Web발신]&#10;현대카드 승인&#10;홍*동&#10;18,500원 일시불&#10;11/27 12:31 배달의민족"></textarea>
+    <div class="btns2"><button type="button" id="sms-cancel">취소</button><button type="submit" class="primary">채우기</button></div>
+  </form>
+</dialog>
+
+<!-- 즐겨찾기 관리 -->
+<dialog id="dlg-favs" class="small">
+  <h3>즐겨찾기</h3>
+  <p class="sub">입력 화면에서 ☆ 를 누르면 지금 입력한 내용이 즐겨찾기로 저장돼요.</p>
+  <div id="favs-list"></div>
+  <div class="btns2"><button type="button" id="favs-close">닫기</button></div>
+</dialog>
+
 <!-- 결제수단 추가 -->
 <dialog id="dlg-addpay" class="small">
   <form id="form-addpay">
-    <h3>결제수단 추가</h3>
+    <h3 id="ap-title">결제수단 추가</h3>
     <input id="ap-name" placeholder="이름 (예: 신한 Deep Dream)" maxlength="20" required>
     <div class="lab2">종류</div>
     <div class="chips wrap" id="ap-kind"></div>
+    <div id="ap-bill">
+      <div class="lab2">카드값 계산 (선택) — 비워 두면 카드값 화면에 안 나와요</div>
+      <div class="billrow"><label>결제일 <input id="ap-day" inputmode="numeric" maxlength="2" placeholder="14">일</label>
+      <label>이용기간 시작 <input id="ap-start" inputmode="numeric" maxlength="2" placeholder="1">일</label></div>
+      <p class="hint2">예) 결제일 14일 · 시작 1일 → 지난달 1일~말일 사용분이 14일에 나가요<br>결제일 25일 · 시작 12일 → 지난달 12일~이번 달 11일 사용분</p>
+    </div>
     <div class="lab2">누가 쓰나요</div>
     <div class="chips" id="ap-owner"><button type="button" data-o="me" class="on">나만</button><button type="button" data-o="shared">공용 (둘 다)</button></div>
-    <div class="btns2"><button type="button" id="ap-cancel">취소</button><button type="submit" class="primary">추가</button></div>
+    <div class="btns2"><button type="button" id="ap-cancel">취소</button><button type="submit" class="primary" id="ap-ok">추가</button></div>
   </form>
 </dialog>
 
